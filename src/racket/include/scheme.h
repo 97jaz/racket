@@ -430,7 +430,7 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 /*                                                                   */
 /* ... xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxx1   fixnum                  */
 /* ... xxxxxxxx xxxxxxxx xxxxxxxx tttttt10   tagged immediate        */
-/* ... pppppppp pppppppp pppppppp pppppppp   pointer to boxed object */
+/* ... pppppppp pppppppp pppppppp pppppp00   pointer to boxed object */
 /*                                                                   */
 /* Pointers will be aligned, at least, to 4-byte boundaries, so the  */
 /* least significant two bits will always be 0, to distinguish them  */
