@@ -3099,12 +3099,12 @@ scheme_do_eval(Scheme_Object *obj, int num_rands, Scheme_Object **rands,
 
   eval_top:
 
-    if (SCHEME_INTP(obj)) {
+    if (!BOXEDP(obj)) {
       v = obj;
       goto returnv_never_multi;
     }
 
-    type = _SCHEME_TYPE(obj);
+    type = BOXED_TYPE(obj);
     switch (type)
       {
       case scheme_toplevel_type:
@@ -3569,7 +3569,7 @@ scheme_do_eval(Scheme_Object *obj, int num_rands, Scheme_Object **rands,
 	    clos = stack[i];
 
 #ifdef MZ_USE_JIT
-	    if (SAME_TYPE(_SCHEME_TYPE(clos), scheme_closure_type)) {
+	    if (_HAS_BOXED_TYPE(clos, scheme_closure_type)) {
 	      dest = ((Scheme_Closure *)clos)->vals;
 	    } else {
 	      dest = ((Scheme_Native_Closure *)clos)->vals;

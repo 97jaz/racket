@@ -727,6 +727,13 @@ int check_location;
    jit_beqi_i(label, scratch_reg, stype))
 #endif
 
+#define mz_bnei_mt(label, reg, stype, scratch_reg)      \
+  (jit_andi_ul(scratch_reg, reg, 0xff), \
+   jit_bnei_l(label, scratch_reg, TYPE_TO_IMMEDIATE_TAG(stype)))
+#define mz_beqi_mt(label, reg, stype, scratch_reg)      \
+  (jit_andi_ul(scratch_reg, reg, 0xff), \
+   jit_beqi_l(label, scratch_reg, TYPE_TO_IMMEDIATE_TAG(stype)))
+
 /* Stack alignment, fixed up by mz_push_locals():
     - On PPC, jit_prolog() generates an aligned stack.
       It also leaves room for 3 locals.

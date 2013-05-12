@@ -310,36 +310,38 @@ name (const Scheme_Object *n1, const Scheme_Object *n2) \
   if (SCHEME_INTP(n1)) \
     { \
       exactzerowrapl( if (n1 == zeroi) ) \
-      if (SCHEME_INTP(n2)) \
+      if (SCHEME_INTP(n2)) { \
 	return iop(SCHEME_INT_VAL(n1), SCHEME_INT_VAL(n2)); \
-      t2 = _SCHEME_TYPE(n2); \
-      FLOATWRAP( \
-      if (t2 == scheme_float_type) { \
-        float d = SCHEME_FLT_VAL(n2); \
-        snanchk(d); \
-        return fsop(SCHEME_INT_VAL(n1), d); \
+      } else if (BOXEDP(n2)) { \
+        t2 = BOXED_TYPE(n2); \
+        FLOATWRAP( \
+        if (t2 == scheme_float_type) { \
+          float d = SCHEME_FLT_VAL(n2); \
+          snanchk(d); \
+          return fsop(SCHEME_INT_VAL(n1), d); \
+        } \
+        ) \
+        if (t2 == scheme_double_type) { \
+          double d = SCHEME_DBL_VAL(n2); \
+          nanchk(d); \
+          return fop(SCHEME_INT_VAL(n1), d); \
+        } \
+        if (t2 == scheme_bignum_type) { \
+          return name ## __int_big(n1, n2); \
+         } \
+         if (t2 == scheme_rational_type) { \
+          return name ## __int_rat(n1, n2); \
+         } \
+        complexwrap( \
+        if (noniziwrap((t2 == scheme_complex_type))) {        \
+          return name ## __int_comp(n1, n2); \
+        } \
+        ) \
       } \
-      ) \
-      if (t2 == scheme_double_type) { \
-        double d = SCHEME_DBL_VAL(n2); \
-        nanchk(d); \
-        return fop(SCHEME_INT_VAL(n1), d); \
-      } \
-      if (t2 == scheme_bignum_type) { \
-        return name ## __int_big(n1, n2); \
-       } \
-       if (t2 == scheme_rational_type) { \
-        return name ## __int_rat(n1, n2); \
-       } \
-      complexwrap( \
-      if (noniziwrap((t2 == scheme_complex_type))) {        \
-        return name ## __int_comp(n1, n2); \
-      } \
-      ) \
       return name ## __wrong_contract(n2); \
     } \
-  else { \
-   t1 = _SCHEME_TYPE(n1); \
+  else if (BOXEDP(n1)) { \
+   t1 = BOXED_TYPE(n1); \
    FLOATWRAP( \
    if (t1 == scheme_float_type) \
     { \
@@ -347,31 +349,32 @@ name (const Scheme_Object *n1, const Scheme_Object *n2) \
       if (SCHEME_INTP(n2)) { \
         snanchk(d1); \
         return fsop(d1, SCHEME_INT_VAL(n2)); \
+      } else if (BOXEDP(n2)) { \
+        t2 = BOXED_TYPE(n2); \
+        if (t2 == scheme_float_type) { \
+          float d2 = SCHEME_FLT_VAL(n2); \
+          snanchk(d1); \
+          snanchk(d2); \
+          return fsop(d1, d2); \
+        } \
+        if (t2 == scheme_double_type) { \
+          double d2 = SCHEME_DBL_VAL(n2); \
+          nanchk(d1); \
+          nanchk(d2); \
+          return fop(d1, d2); \
+        } \
+        if (t2 == scheme_bignum_type) { \
+          return name ## __flt_big(d1, n1, n2);    \
+        } \
+         if (t2 == scheme_rational_type) { \
+          return name ## __flt_rat(d1, n1, n2);   \
+        } \
+        complexwrap( \
+         if (noniziwrap((t2 == scheme_complex_type))) { \
+          return name ## __flt_comp(d1, n1, n2);        \
+        } \
+        ) \
       } \
-      t2 = _SCHEME_TYPE(n2); \
-      if (t2 == scheme_float_type) { \
-        float d2 = SCHEME_FLT_VAL(n2); \
-        snanchk(d1); \
-        snanchk(d2); \
-        return fsop(d1, d2); \
-      } \
-      if (t2 == scheme_double_type) { \
-        double d2 = SCHEME_DBL_VAL(n2); \
-        nanchk(d1); \
-        nanchk(d2); \
-        return fop(d1, d2); \
-      } \
-      if (t2 == scheme_bignum_type) { \
-        return name ## __flt_big(d1, n1, n2);    \
-      } \
-       if (t2 == scheme_rational_type) { \
-        return name ## __flt_rat(d1, n1, n2);   \
-      } \
-      complexwrap( \
-       if (noniziwrap((t2 == scheme_complex_type))) { \
-        return name ## __flt_comp(d1, n1, n2);        \
-      } \
-      )\
       return name ## __wrong_contract(n2); \
     } else \
    ) \
@@ -381,111 +384,115 @@ name (const Scheme_Object *n1, const Scheme_Object *n2) \
       if (SCHEME_INTP(n2)) { \
         nanchk(d1); \
         return fop(d1, SCHEME_INT_VAL(n2)); \
+      } else if (BOXEDP(n2)) { \
+        t2 = BOXED_TYPE(n2); \
+        FLOATWRAP( \
+        if (t2 == scheme_float_type) { \
+          double d2 = SCHEME_FLT_VAL(n2); \
+          nanchk(d1); \
+          nanchk(d2); \
+          return fop(d1, d2); \
+        } \
+        ) \
+        if (t2 == scheme_double_type) { \
+          double d2 = SCHEME_DBL_VAL(n2); \
+          nanchk(d1); \
+          nanchk(d2); \
+          return fop(d1, d2); \
+        } \
+        if (t2 == scheme_bignum_type) { \
+          return name ## __dbl_big(d1, n1, n2);    \
+        } \
+         if (t2 == scheme_rational_type) { \
+           return name ## __dbl_rat(d1, n1, n2);   \
+        } \
+        complexwrap( \
+        if (noniziwrap((t2 == scheme_complex_type))) { \
+          return name ## __dbl_comp(d1, n1, n2); \
+        } \
+        )\
       } \
-      t2 = _SCHEME_TYPE(n2); \
-      FLOATWRAP( \
-      if (t2 == scheme_float_type) { \
-        double d2 = SCHEME_FLT_VAL(n2); \
-        nanchk(d1); \
-        nanchk(d2); \
-        return fop(d1, d2); \
-      } \
-      ) \
-      if (t2 == scheme_double_type) { \
-        double d2 = SCHEME_DBL_VAL(n2); \
-        nanchk(d1); \
-        nanchk(d2); \
-        return fop(d1, d2); \
-      } \
-      if (t2 == scheme_bignum_type) { \
-        return name ## __dbl_big(d1, n1, n2);    \
-      } \
-       if (t2 == scheme_rational_type) { \
-         return name ## __dbl_rat(d1, n1, n2);   \
-      } \
-      complexwrap( \
-      if (noniziwrap((t2 == scheme_complex_type))) { \
-        return name ## __dbl_comp(d1, n1, n2); \
-      } \
-      )\
       return name ## __wrong_contract(n2); \
     } \
   else if (t1 == scheme_bignum_type) \
     { \
       if (SCHEME_INTP(n2)) { \
         return name ## __big_int(n1, n2); \
+      } else if (BOXEDP(n2)) { \
+        t2 = BOXED_TYPE(n2); \
+        FLOATWRAP( \
+        if (t2 == scheme_float_type) { \
+          return name ## __big_flt(n1, n2); \
+        } \
+        ) \
+        if (t2 == scheme_double_type) { \
+          return name ## __big_dbl(n1, n2); \
+        } \
+        if (t2 == scheme_bignum_type) \
+          return bn_op((n1), (n2)); \
+        if (t2 == scheme_rational_type) \
+          return name ## __big_rat(n1, n2); \
+        complexwrap( \
+        if (noniziwrap((t2 == scheme_complex_type))) { \
+          return name ## __big_comp(n1, n2); \
+        } \
+        )\
       } \
-      t2 = _SCHEME_TYPE(n2); \
-      FLOATWRAP( \
-      if (t2 == scheme_float_type) { \
-        return name ## __big_flt(n1, n2); \
-      } \
-      ) \
-      if (t2 == scheme_double_type) { \
-        return name ## __big_dbl(n1, n2); \
-       } \
-       if (t2 == scheme_bignum_type) \
-         return bn_op((n1), (n2)); \
-       if (t2 == scheme_rational_type) \
-	 return name ## __big_rat(n1, n2); \
-       complexwrap( \
-       if (noniziwrap((t2 == scheme_complex_type))) { \
-	 return name ## __big_comp(n1, n2); \
-       } \
-       )\
-       return name ## __wrong_contract(n2); \
+      return name ## __wrong_contract(n2); \
     } \
   else if (t1 == scheme_rational_type) \
     { \
       if (SCHEME_INTP(n2)) { \
          return name ## __rat_int(n1, n2); \
+      } else if (BOXEDP(n2)) { \
+        t2 = BOXED_TYPE(n2); \
+        FLOATWRAP( \
+        if (t2 == scheme_float_type) { \
+          return name ## __rat_flt(n1, n2); \
+        } \
+        ) \
+        if (t2 == scheme_double_type) { \
+          return name ## __rat_dbl(n1, n2); \
+        } \
+        if (t2 == scheme_bignum_type) \
+          return name ## __rat_big(n1, n2); \
+        if (t2 == scheme_rational_type) \
+          return rop((n1), (n2)); \
+        complexwrap( \
+        if (noniziwrap((t2 == scheme_complex_type))) { \
+          return name ## __rat_comp(n1, n2); \
+        } \
+        )\
       } \
-      t2 = _SCHEME_TYPE(n2); \
-      FLOATWRAP( \
-      if (t2 == scheme_float_type) { \
-         return name ## __rat_flt(n1, n2); \
-       } \
-       ) \
-       if (t2 == scheme_double_type) { \
-         return name ## __rat_dbl(n1, n2); \
-       } \
-       if (t2 == scheme_bignum_type) \
-         return name ## __rat_big(n1, n2); \
-       if (t2 == scheme_rational_type) \
-	 return rop((n1), (n2)); \
-       complexwrap( \
-       if (noniziwrap((t2 == scheme_complex_type))) { \
-         return name ## __rat_comp(n1, n2); \
-       } \
-       )\
-       return name ## __wrong_contract(n2); \
+      return name ## __wrong_contract(n2); \
     } \
   complexwrap( \
   else if (noniziwrap((t1 == scheme_complex_type))) \
     { \
-       if (SCHEME_INTP(n2)) \
+       if (SCHEME_INTP(n2)) { \
          return name ## __comp_int(n1, n2); \
-       t2 = _SCHEME_TYPE(n2); \
-       FLOATWRAP( \
-       if (t2 == scheme_float_type) { \
-         return name ## __comp_flt(n1, n2); \
+       } else if (BOXEDP(n2)) { \
+         t2 = BOXED_TYPE(n2); \
+         FLOATWRAP( \
+         if (t2 == scheme_float_type) { \
+           return name ## __comp_flt(n1, n2); \
+         } \
+         ) \
+         if (t2 == scheme_double_type) { \
+           return name ## __comp_dbl(n1, n2); \
+         } \
+         if (t2 == scheme_bignum_type) \
+           return name ## __comp_big(n1, n2); \
+         if (t2 == scheme_rational_type) \
+           return name ## __comp_rat(n1, n2); \
+         if (noniziwrap((t2 == scheme_complex_type))) \
+           return cxop((n1), (n2)); \
        } \
-       ) \
-       if (t2 == scheme_double_type) { \
-         return name ## __comp_dbl(n1, n2); \
-       } \
-       if (t2 == scheme_bignum_type) \
-         return name ## __comp_big(n1, n2); \
-       if (t2 == scheme_rational_type) \
-         return name ## __comp_rat(n1, n2); \
-       if (noniziwrap((t2 == scheme_complex_type))) \
-	 return cxop((n1), (n2)); \
        return name ## __wrong_contract(n2); \
     } \
   ) \
-  else \
-       return name ## __wrong_contract(n1); \
   } \
+  return name ## __wrong_contract(n1); \
 }
 
 #ifdef NAN_EQUALS_ANYTHING
@@ -688,10 +695,10 @@ name (int argc, Scheme_Object *argv[]) \
   ) \
   Scheme_Object *o = argv[0]; \
   PRECHECK() \
-  if (SCHEME_INTP(o)) \
+  if (SCHEME_INTP(o)) { \
     d = SCHEME_INT_VAL(o); \
-  else { \
-   t = _SCHEME_TYPE(o); \
+  } else if (BOXEDP(o)) { \
+   t = BOXED_TYPE(o); \
    FLOATWRAP( \
    if (t == scheme_float_type) { \
      D_FLOATWRAP( is_single = 1; ) \

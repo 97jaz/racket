@@ -1245,7 +1245,7 @@ immutablep (int argc, Scheme_Object *argv[])
 {
   Scheme_Object *v = argv[0];
 
-  return ((!SCHEME_INTP(v)
+  return ((BOXEDP(v)
 	   && ((SCHEME_IMMUTABLEP(v)
                 && (SCHEME_VECTORP(v)
                     || SCHEME_BYTE_STRINGP(v)
@@ -3424,7 +3424,7 @@ Scheme_Object *scheme_make_ephemeron(Scheme_Object *key, Scheme_Object *val)
   Scheme_Ephemeron *e;
   int can_gc = 1;
 
-  if (SCHEME_INTP(key) || !GC_base(key))
+  if (SCHEME_INTP(key) || IMMEDIATEP(key) || !GC_base(key))
     can_gc = 0;
 
   if (can_gc) {

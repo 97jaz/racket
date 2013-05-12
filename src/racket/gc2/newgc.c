@@ -61,7 +61,7 @@ intptr_t mp_ac_freed;
 #include "gc2_dump.h"
 
 /* the number of tags to use for tagged objects */
-#define NUMBER_OF_TAGS 512
+#define NUMBER_OF_TAGS 1024
 
 #ifdef SIXTY_FOUR_BIT_INTEGERS
 #define PAGEMAP64_LEVEL1_SIZE (1 << 16)

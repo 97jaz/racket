@@ -514,20 +514,21 @@ scheme_add1 (int argc, Scheme_Object *argv[])
       Small_Bignum b;
       return scheme_bignum_add1(scheme_make_small_bignum(v, &b));
     }
-  }
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type)
-    return scheme_make_float(SCHEME_FLT_VAL(o) + 1.0f);
+    if (t == scheme_float_type)
+      return scheme_make_float(SCHEME_FLT_VAL(o) + 1.0f);
 #endif
-  if (t == scheme_double_type)
-    return scheme_make_double(SCHEME_DBL_VAL(o) + 1.0);
-  if (t == scheme_bignum_type)
-    return scheme_bignum_add1(o);
-  if (t == scheme_rational_type)
-    return scheme_rational_add1(o);
-  if (t == scheme_complex_type)
-    return scheme_complex_add1(o);
+    if (t == scheme_double_type)
+      return scheme_make_double(SCHEME_DBL_VAL(o) + 1.0);
+    if (t == scheme_bignum_type)
+      return scheme_bignum_add1(o);
+    if (t == scheme_rational_type)
+      return scheme_rational_add1(o);
+    if (t == scheme_complex_type)
+      return scheme_complex_add1(o);
+  }
 
   NEED_NUMBER(add1);
 
@@ -549,21 +550,22 @@ scheme_sub1 (int argc, Scheme_Object *argv[])
       Small_Bignum b;
       return scheme_bignum_sub1(scheme_make_small_bignum(v, &b));
     }
-  }
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type)
-    return scheme_make_float(SCHEME_FLT_VAL(o) - 1.0f);
+    if (t == scheme_float_type)
+      return scheme_make_float(SCHEME_FLT_VAL(o) - 1.0f);
 #endif
-  if (t == scheme_double_type)
-    return scheme_make_double(SCHEME_DBL_VAL(o) - 1.0);
-  if (t == scheme_bignum_type)
-    return scheme_bignum_sub1(o);
-  if (t == scheme_rational_type)
-    return scheme_rational_sub1(o);
-  if (t == scheme_complex_type)
-    return scheme_complex_sub1(o);
-  
+    if (t == scheme_double_type)
+      return scheme_make_double(SCHEME_DBL_VAL(o) - 1.0);
+    if (t == scheme_bignum_type)
+      return scheme_bignum_sub1(o);
+    if (t == scheme_rational_type)
+      return scheme_rational_sub1(o);
+    if (t == scheme_complex_type)
+      return scheme_complex_sub1(o);
+  }
+
   NEED_NUMBER(sub1);
 
   ESCAPED_BEFORE_HERE;
@@ -765,24 +767,25 @@ scheme_abs(int argc, Scheme_Object *argv[])
   if (SCHEME_INTP(o)) {
     intptr_t n = SCHEME_INT_VAL(o);
     return scheme_make_integer_value(ABS(n));
-  } 
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type)
-    return scheme_make_float(fabs(SCHEME_FLT_VAL(o)));
+    if (t == scheme_float_type)
+      return scheme_make_float(fabs(SCHEME_FLT_VAL(o)));
 #endif
-  if (t == scheme_double_type)
-    return scheme_make_double(fabs(SCHEME_DBL_VAL(o)));
-  if (t == scheme_bignum_type) {
-    if (SCHEME_BIGPOS(o))
-      return o;
-    return scheme_bignum_negate(o);
-  }
-  if (t == scheme_rational_type) {
-    if (scheme_is_rational_positive(o))
-      return o;
-    else
-      return scheme_rational_negate(o);
+    if (t == scheme_double_type)
+      return scheme_make_double(fabs(SCHEME_DBL_VAL(o)));
+    if (t == scheme_bignum_type) {
+      if (SCHEME_BIGPOS(o))
+        return o;
+      return scheme_bignum_negate(o);
+    }
+    if (t == scheme_rational_type) {
+      if (scheme_is_rational_positive(o))
+        return o;
+      else
+        return scheme_rational_negate(o);
+    }
   }
 
   NEED_REAL(abs);

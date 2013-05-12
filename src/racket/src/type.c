@@ -600,7 +600,7 @@ void scheme_register_traversers(void)
   GC_REG_TRAV(scheme_escaping_cont_type, escaping_cont_proc);
   GC_REG_TRAV(scheme_rt_cont_jmp, cont_jmp_proc);
 
-  GC_REG_TRAV(scheme_char_type, small_atomic_obj);
+  GC_REG_TRAV(scheme_char_type, bad_trav);
   GC_REG_TRAV(scheme_integer_type, bad_trav);
   GC_REG_TRAV(scheme_bignum_type, bignum_obj);
   GC_REG_TRAV(scheme_rational_type, rational_obj);

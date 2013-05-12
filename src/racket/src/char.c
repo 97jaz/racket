@@ -28,7 +28,6 @@
 
 /* globals */
 #include "schuchar.inc"
-READ_ONLY Scheme_Object **scheme_char_constants;
 READ_ONLY static Scheme_Object *general_category_symbols[NUM_GENERAL_CATEGORIES];
 
 /* locals */
@@ -73,21 +72,8 @@ void scheme_init_char (Scheme_Env *env)
   Scheme_Object *p;
   int i;
 
-  REGISTER_SO(scheme_char_constants);
   REGISTER_SO(general_category_symbols);
 
-  scheme_char_constants = 
-    (Scheme_Object **)scheme_malloc_eternal(256 * sizeof(Scheme_Object*));
-    
-  for (i = 0; i < 256; i++) {
-    Scheme_Object *sc;
-    sc = scheme_alloc_eternal_small_object();
-    sc->type = scheme_char_type;
-    SCHEME_CHAR_VAL(sc) = i;
-    
-    scheme_char_constants[i] = sc;
-  }
-  
   for (i = 0; i < NUM_GENERAL_CATEGORIES; i++) {
     Scheme_Object *s;
     s = scheme_intern_symbol(general_category_names[i]);
@@ -143,17 +129,7 @@ void scheme_init_char (Scheme_Env *env)
 
 Scheme_Object *scheme_make_char(mzchar ch)
 {
-  Scheme_Object *o;
-
-  if (ch < 256)
-    return scheme_char_constants[ch];
-  
-  o = scheme_malloc_small_atomic_tagged(sizeof(Scheme_Small_Object));
-  CLEAR_KEY_FIELD(o);
-  o->type = scheme_char_type;
-  SCHEME_CHAR_VAL(o) = ch;
-
-  return o;
+  return scheme_make_character(ch);
 }
 
 Scheme_Object *scheme_make_char_or_nul(mzchar v)
@@ -162,7 +138,7 @@ Scheme_Object *scheme_make_char_or_nul(mzchar v)
       && ((v < 0xD800) || (v > 0xDFFF)))
     return scheme_make_char(v);
 
-  return scheme_char_constants[0];
+  return scheme_make_char(0);
 }
 
 /* locals */

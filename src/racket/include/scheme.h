@@ -348,7 +348,6 @@ typedef struct Scheme_Object *(*Scheme_Closure_Func)(struct Scheme_Object *);
 typedef struct {
   Scheme_Inclhash_Object iso;
   union {
-    mzchar char_val;
     Scheme_Object *ptr_value;
     intptr_t int_val;
     Scheme_Object *ptr_val;
@@ -427,13 +426,21 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 #define OBJ_TO_LONG(ptr) ((intptr_t)(ptr))
 #define LONG_TO_OBJ(l) ((Scheme_Object *)(void *)(intptr_t)(l))
 
-/* Scheme Objects are always aligned on 2-byte boundaries, so  */
-/* words of type Scheme_Object * will always have zero in the  */
-/* least significant bit.  Therefore, we can use this bit as a */
-/* tag to indicate that the `pointer' isn't really a pointer   */
-/* but a 31-bit signed immediate integer. */
+/* A (Scheme_Object *) is one of:                                    */
+/*                                                                   */
+/* ... xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxx1   fixnum                  */
+/* ... xxxxxxxx xxxxxxxx xxxxxxxx tttttt10   tagged immediate        */
+/* ... pppppppp pppppppp pppppppp pppppppp   pointer to boxed object */
+/*                                                                   */
+/* Pointers will be aligned, at least, to 4-byte boundaries, so the  */
+/* least significant two bits will always be 0, to distinguish them  */
+/* from immediates.                                                  */
+
+
 
 #define SCHEME_INTP(obj)     (OBJ_TO_LONG(obj) & 0x1)
+#define IMMEDIATEP(obj)      ((OBJ_TO_LONG(obj) & 0x3) == 0x2)
+#define BOXEDP(obj)          (!(OBJ_TO_LONG(obj) & 0x3))
 
 #define SAME_PTR(a, b) ((a) == (b))
 #define NOT_SAME_PTR(a, b) ((a) != (b))
@@ -444,42 +451,51 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 #define SAME_TYPE(a, b) ((Scheme_Type)(a) == (Scheme_Type)(b))
 #define NOT_SAME_TYPE(a, b) ((Scheme_Type)(a) != (Scheme_Type)(b))
 
-# define SCHEME_TYPE(obj)     (SCHEME_INTP(obj)?(Scheme_Type)scheme_integer_type:((Scheme_Object *)(obj))->type)
-# define _SCHEME_TYPE(obj) ((obj)->type) /* unsafe version */
+#define IMMEDIATE_TAG(obj)         (OBJ_TO_LONG(obj) & 0xff)
+#define TYPE_TO_IMMEDIATE_TAG(t)   ((Scheme_Type)(t) >> 8)
+#define IMMEDIATE_TAG_TO_TYPE(t)   ((Scheme_Type)((t) << 8))
+#define HAS_IMMEDIATE_TYPE(obj, t) (IMMEDIATE_TAG(obj) == TYPE_TO_IMMEDIATE_TAG(t))
+#define IMMEDIATE_TYPE(obj)        IMMEDIATE_TAG_TO_TYPE(IMMEDIATE_TAG(obj))
+
+#define BOXED_TYPE(obj)         (((Scheme_Object *)(obj))->type)
+#define _HAS_BOXED_TYPE(obj, t) SAME_TYPE(BOXED_TYPE(obj), t)
+#define HAS_BOXED_TYPE(obj, t)  (BOXEDP(obj) && _HAS_BOXED_TYPE(obj, t))
+
+#define SCHEME_TYPE(obj)     (SCHEME_INTP(obj)?(Scheme_Type)scheme_integer_type:(BOXEDP(obj) ? BOXED_TYPE(obj) : IMMEDIATE_TYPE(obj)))
 
 /*========================================================================*/
 /*                        basic Scheme predicates                         */
 /*========================================================================*/
 
-#define SCHEME_CHARP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_char_type)
+#define SCHEME_CHARP(obj)    HAS_IMMEDIATE_TYPE(obj, scheme_char_type)
 /* SCHEME_INTP defined above */
-#define SCHEME_DBLP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_double_type)
+#define SCHEME_DBLP(obj)     HAS_BOXED_TYPE(obj, scheme_double_type)
 #ifdef MZ_USE_SINGLE_FLOATS
-# define SCHEME_FLTP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_float_type)
+# define SCHEME_FLTP(obj)    HAS_BOXED_TYPE(obj, scheme_float_type)
 # define SCHEME_FLOATP(obj)     (SCHEME_FLTP(obj) || SCHEME_DBLP(obj))
 #else
 # define SCHEME_FLTP SCHEME_DBLP
 # define SCHEME_FLOATP SCHEME_DBLP
 #endif
-#define SCHEME_BIGNUMP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_bignum_type)
-#define SCHEME_RATIONALP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_rational_type)
-#define SCHEME_COMPLEXP(obj)     (!SCHEME_INTP(obj) && ((_SCHEME_TYPE(obj) == scheme_complex_type)))
-#define SCHEME_EXACT_INTEGERP(obj)  (SCHEME_INTP(obj) || (_SCHEME_TYPE(obj) == scheme_bignum_type))
-#define SCHEME_EXACT_REALP(obj)  (SCHEME_INTP(obj) || (_SCHEME_TYPE(obj) == scheme_bignum_type) || (_SCHEME_TYPE(obj) == scheme_rational_type))
-#define SCHEME_REALP(obj)  (SCHEME_INTP(obj) || ((_SCHEME_TYPE(obj) >= scheme_bignum_type) && (_SCHEME_TYPE(obj) < scheme_complex_type)))
-#define SCHEME_NUMBERP(obj)  (SCHEME_INTP(obj) || ((_SCHEME_TYPE(obj) >= scheme_bignum_type) && (_SCHEME_TYPE(obj) <= scheme_complex_type)))
+#define SCHEME_BIGNUMP(obj)     HAS_BOXED_TYPE(obj, scheme_bignum_type)
+#define SCHEME_RATIONALP(obj)     HAS_BOXED_TYPE(obj, scheme_rational_type)
+#define SCHEME_COMPLEXP(obj)     HAS_BOXED_TYPE(obj, scheme_complex_type)
+#define SCHEME_EXACT_INTEGERP(obj)  (SCHEME_INTP(obj) || HAS_BOXED_TYPE(obj, scheme_bignum_type))
+#define SCHEME_EXACT_REALP(obj)  (SCHEME_INTP(obj) || (BOXEDP(obj) && (_HAS_BOXED_TYPE(obj, scheme_bignum_type) || _HAS_BOXED_TYPE(obj, scheme_rational_type))))
+#define SCHEME_REALP(obj)  (SCHEME_INTP(obj) || (BOXEDP(obj) && (BOXED_TYPE(obj) >= scheme_bignum_type) && (BOXED_TYPE(obj) < scheme_complex_type)))
+#define SCHEME_NUMBERP(obj)  (SCHEME_INTP(obj) || (BOXEDP(obj) && (BOXED_TYPE(obj) >= scheme_bignum_type) && (BOXED_TYPE(obj) <= scheme_complex_type)))
 
-#define SCHEME_LONG_DBLP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_long_double_type)
+#define SCHEME_LONG_DBLP(obj)     HAS_BOXED_TYPE(obj, scheme_long_double_type)
 
-#define SCHEME_CHAR_STRINGP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_char_string_type)
+#define SCHEME_CHAR_STRINGP(obj)  HAS_BOXED_TYPE(obj, scheme_char_string_type)
 #define SCHEME_MUTABLE_CHAR_STRINGP(obj)  (SCHEME_CHAR_STRINGP(obj) && SCHEME_MUTABLEP(obj))
 #define SCHEME_IMMUTABLE_CHAR_STRINGP(obj)  (SCHEME_CHAR_STRINGP(obj) && SCHEME_IMMUTABLEP(obj))
 
-#define SCHEME_BYTE_STRINGP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_byte_string_type)
+#define SCHEME_BYTE_STRINGP(obj)  HAS_BOXED_TYPE(obj, scheme_byte_string_type)
 #define SCHEME_MUTABLE_BYTE_STRINGP(obj)  (SCHEME_BYTE_STRINGP(obj) && SCHEME_MUTABLEP(obj))
 #define SCHEME_IMMUTABLE_BYTE_STRINGP(obj)  (SCHEME_BYTE_STRINGP(obj) && SCHEME_IMMUTABLEP(obj))
 
-#define SCHEME_PATHP(obj)  SAME_TYPE(SCHEME_TYPE(obj), SCHEME_PLATFORM_PATH_KIND)
+#define SCHEME_PATHP(obj)  HAS_BOXED_TYPE(obj, SCHEME_PLATFORM_PATH_KIND)
 #define SCHEME_GENERAL_PATHP(obj)  ((SCHEME_TYPE(obj) >= scheme_unix_path_type) && (SCHEME_TYPE(obj) <= scheme_windows_path_type))
   /* A path is guaranteed to have the same shape as a byte string */
 
@@ -489,8 +505,8 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 #define SCHEME_GENERAL_PATH_STRINGP(x) (SCHEME_CHAR_STRINGP(x) || SCHEME_GENERAL_PATHP(x))
 #define SCHEME_GENERAL_PATH_STRING_STR "path (for any platform) or string"
 
-#define SCHEME_SYMBOLP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_symbol_type)
-#define SCHEME_KEYWORDP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_keyword_type)
+#define SCHEME_SYMBOLP(obj)  HAS_BOXED_TYPE(obj, scheme_symbol_type)
+#define SCHEME_KEYWORDP(obj)  HAS_BOXED_TYPE(obj, scheme_keyword_type)
 
 #define SCHEME_STRSYMP(obj) (SCHEME_CHAR_STRINGP(obj) || SCHEME_SYMBOLP(obj))
 
@@ -501,60 +517,60 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 #define SCHEME_VOIDP(obj)     SAME_OBJ((obj), scheme_void)
 
 #define SCHEME_NULLP(obj)    SAME_OBJ(obj, scheme_null)
-#define SCHEME_PAIRP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_pair_type)
-#define SCHEME_MPAIRP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_mutable_pair_type)
+#define SCHEME_PAIRP(obj)    HAS_BOXED_TYPE(obj, scheme_pair_type)
+#define SCHEME_MPAIRP(obj)    HAS_BOXED_TYPE(obj, scheme_mutable_pair_type)
 #define SCHEME_MUTABLE_PAIRP(obj)    SCHEME_MPAIRP(obj)
 #define SCHEME_LISTP(obj)    (SCHEME_NULLP(obj) || SCHEME_PAIRP(obj))
 
-#define SCHEME_RPAIRP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_raw_pair_type)
+#define SCHEME_RPAIRP(obj)    HAS_BOXED_TYPE(obj, scheme_raw_pair_type)
 
-#define SCHEME_BOXP(obj)     SAME_TYPE(SCHEME_TYPE(obj), scheme_box_type)
+#define SCHEME_BOXP(obj)     HAS_BOXED_TYPE(obj, scheme_box_type)
 #define SCHEME_MUTABLE_BOXP(obj)  (SCHEME_BOXP(obj) && SCHEME_MUTABLEP(obj))
 #define SCHEME_IMMUTABLE_BOXP(obj)  (SCHEME_BOXP(obj) && SCHEME_IMMUTABLEP(obj))
 
-#define SCHEME_PROMPT_TAGP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_prompt_tag_type)
-#define SCHEME_CONTINUATION_MARK_KEYP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_continuation_mark_key_type)
+#define SCHEME_PROMPT_TAGP(obj) HAS_BOXED_TYPE(obj, scheme_prompt_tag_type)
+#define SCHEME_CONTINUATION_MARK_KEYP(obj) HAS_BOXED_TYPE(obj, scheme_continuation_mark_key_type)
 
-#define SCHEME_BUCKTP(obj) SAME_TYPE(SCHEME_TYPE(obj),scheme_bucket_table_type)
-#define SCHEME_HASHTP(obj) SAME_TYPE(SCHEME_TYPE(obj),scheme_hash_table_type)
-#define SCHEME_HASHTRP(obj) SAME_TYPE(SCHEME_TYPE(obj),scheme_hash_tree_type)
+#define SCHEME_BUCKTP(obj) HAS_BOXED_TYPE(obj,scheme_bucket_table_type)
+#define SCHEME_HASHTP(obj) HAS_BOXED_TYPE(obj, scheme_hash_table_type)
+#define SCHEME_HASHTRP(obj) HAS_BOXED_TYPE(obj, scheme_hash_tree_type)
 
-#define SCHEME_VECTORP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_vector_type)
+#define SCHEME_VECTORP(obj)  HAS_BOXED_TYPE(obj, scheme_vector_type)
 #define SCHEME_MUTABLE_VECTORP(obj)  (SCHEME_VECTORP(obj) && SCHEME_MUTABLEP(obj))
 #define SCHEME_IMMUTABLE_VECTORP(obj)  (SCHEME_VECTORP(obj) && SCHEME_IMMUTABLEP(obj))
 
-#define SCHEME_FLVECTORP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_flvector_type)
-#define SCHEME_EXTFLVECTORP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_extflvector_type)
-#define SCHEME_FXVECTORP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_fxvector_type)
+#define SCHEME_FLVECTORP(obj)  HAS_BOXED_TYPE(obj, scheme_flvector_type)
+#define SCHEME_EXTFLVECTORP(obj)  HAS_BOXED_TYPE(obj, scheme_extflvector_type)
+#define SCHEME_FXVECTORP(obj)  HAS_BOXED_TYPE(obj, scheme_fxvector_type)
 
-#define SCHEME_STRUCTP(obj) (SAME_TYPE(SCHEME_TYPE(obj), scheme_structure_type) || SAME_TYPE(SCHEME_TYPE(obj), scheme_proc_struct_type))
-#define SCHEME_STRUCT_TYPEP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_struct_type_type)
+#define SCHEME_STRUCTP(obj) (HAS_BOXED_TYPE(obj, scheme_structure_type) || HAS_BOXED_TYPE(obj, scheme_proc_struct_type))
+#define SCHEME_STRUCT_TYPEP(obj) HAS_BOXED_TYPE(obj, scheme_struct_type_type)
 
-#define SCHEME_INPORTP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_input_port_type)
-#define SCHEME_OUTPORTP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_output_port_type)
+#define SCHEME_INPORTP(obj)  HAS_BOXED_TYPE(obj, scheme_input_port_type)
+#define SCHEME_OUTPORTP(obj) HAS_BOXED_TYPE(obj, scheme_output_port_type)
 
 #define SCHEME_INPUT_PORTP(obj)  scheme_is_input_port(obj)
 #define SCHEME_OUTPUT_PORTP(obj) scheme_is_output_port(obj)
 
-#define SCHEME_THREADP(obj)   SAME_TYPE(SCHEME_TYPE(obj), scheme_thread_type)
-#define SCHEME_CUSTODIANP(obj)   SAME_TYPE(SCHEME_TYPE(obj), scheme_custodian_type)
-#define SCHEME_SEMAP(obj)   SAME_TYPE(SCHEME_TYPE(obj), scheme_sema_type)
-#define SCHEME_CHANNELP(obj)   SAME_TYPE(SCHEME_TYPE(obj), scheme_channel_type)
-#define SCHEME_CHANNEL_PUTP(obj)   SAME_TYPE(SCHEME_TYPE(obj), scheme_channel_put_type)
+#define SCHEME_THREADP(obj)   HAS_BOXED_TYPE(obj, scheme_thread_type)
+#define SCHEME_CUSTODIANP(obj)   HAS_BOXED_TYPE(obj, scheme_custodian_type)
+#define SCHEME_SEMAP(obj)   HAS_BOXED_TYPE(obj, scheme_sema_type)
+#define SCHEME_CHANNELP(obj)   HAS_BOXED_TYPE(obj, scheme_channel_type)
+#define SCHEME_CHANNEL_PUTP(obj)   HAS_BOXED_TYPE(obj, scheme_channel_put_type)
 
-#define SCHEME_CONFIGP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_config_type)
-#define SCHEME_NAMESPACEP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_namespace_type)
-#define SCHEME_WEAKP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_weak_box_type)
+#define SCHEME_CONFIGP(obj) HAS_BOXED_TYPE(obj, scheme_config_type)
+#define SCHEME_NAMESPACEP(obj) HAS_BOXED_TYPE(obj, scheme_namespace_type)
+#define SCHEME_WEAKP(obj) HAS_BOXED_TYPE(obj, scheme_weak_box_type)
 
-#define SCHEME_STXP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_stx_type)
+#define SCHEME_STXP(obj) HAS_BOXED_TYPE(obj, scheme_stx_type)
 
-#define SCHEME_CHAPERONEP(obj) (SAME_TYPE(SCHEME_TYPE(obj), scheme_chaperone_type) \
-                                || SAME_TYPE(SCHEME_TYPE(obj), scheme_proc_chaperone_type))
+#define SCHEME_CHAPERONEP(obj) (HAS_BOXED_TYPE(obj, scheme_chaperone_type) \
+                                || HAS_BOXED_TYPE(obj, scheme_proc_chaperone_type))
 
-#define SCHEME_UDPP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_udp_type)
-#define SCHEME_UDP_EVTP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_udp_evt_type)
+#define SCHEME_UDPP(obj) HAS_BOXED_TYPE(obj, scheme_udp_type)
+#define SCHEME_UDP_EVTP(obj) HAS_BOXED_TYPE(obj, scheme_udp_evt_type)
 
-#define SCHEME_CPTRP(obj) (SAME_TYPE(SCHEME_TYPE(obj), scheme_cpointer_type))
+#define SCHEME_CPTRP(obj) HAS_BOXED_TYPE(obj, scheme_cpointer_type)
 
 #define SCHEME_MUTABLEP(obj) (!(MZ_OPT_HASH_KEY((Scheme_Inclhash_Object *)(obj)) & 0x1))
 #define SCHEME_IMMUTABLEP(obj) (MZ_OPT_HASH_KEY((Scheme_Inclhash_Object *)(obj)) & 0x1)
@@ -588,7 +604,7 @@ typedef intptr_t (*Scheme_Secondary_Hash_Proc)(Scheme_Object *obj, void *cycle_d
 /*                        basic Scheme accessors                          */
 /*========================================================================*/
 
-#define SCHEME_CHAR_VAL(obj) (((Scheme_Small_Object *)(obj))->u.char_val)
+#define SCHEME_CHAR_VAL(obj) (OBJ_TO_LONG(obj)>>8)
 #define SCHEME_INT_VAL(obj)  (OBJ_TO_LONG(obj)>>1)
 #define SCHEME_DBL_VAL(obj)  (((Scheme_Double *)(obj))->double_val)
 #ifdef MZ_LONG_DOUBLE
@@ -690,8 +706,7 @@ typedef struct Scheme_Offset_Cptr
 /*========================================================================*/
 
 #define scheme_make_integer(i)    LONG_TO_OBJ ((OBJ_TO_LONG(i) << 1) | 0x1)
-#define scheme_make_character(ch) ((((mzchar)ch) < 256) ? scheme_char_constants[(unsigned char)(ch)] : scheme_make_char(ch))
-#define scheme_make_ascii_character(ch) scheme_char_constants[(unsigned char)(ch)]
+#define scheme_make_character(ch) LONG_TO_OBJ ((OBJ_TO_LONG(ch) << 8) | TYPE_TO_IMMEDIATE_TAG(scheme_char_type))
 
 #define scheme_uchar_find(table, x) (table[(x >> 8) & 0x1FFF][x & 0xFF])
 
@@ -876,15 +891,15 @@ typedef struct {
 
 /* ------------------------------------------------- */
 
-#define SCHEME_PROCP(obj)  (!SCHEME_INTP(obj) && ((_SCHEME_TYPE(obj) >= scheme_prim_type) && (_SCHEME_TYPE(obj) <= scheme_proc_chaperone_type)))
-#define SCHEME_SYNTAXP(obj)  SAME_TYPE(SCHEME_TYPE(obj), scheme_syntax_compiler_type)
-#define SCHEME_PRIMP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_prim_type)
-#define SCHEME_CLSD_PRIMP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_closed_prim_type)
-#define SCHEME_CONTP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_cont_type)
-#define SCHEME_ECONTP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_escaping_cont_type)
-#define SCHEME_CONT_MARK_SETP(obj)    SAME_TYPE(SCHEME_TYPE(obj), scheme_cont_mark_set_type)
-#define SCHEME_PROC_STRUCTP(obj) SAME_TYPE(SCHEME_TYPE(obj), scheme_proc_struct_type)
-#define SCHEME_CLOSUREP(obj) (SAME_TYPE(SCHEME_TYPE(obj), scheme_closure_type) || SAME_TYPE(SCHEME_TYPE(obj), scheme_case_closure_type))
+#define SCHEME_PROCP(obj)  (BOXEDP(obj) && ((BOXED_TYPE(obj) >= scheme_prim_type) && (BOXED_TYPE(obj) <= scheme_proc_chaperone_type)))
+#define SCHEME_SYNTAXP(obj)  HAS_BOXED_TYPE(obj, scheme_syntax_compiler_type)
+#define SCHEME_PRIMP(obj)    HAS_BOXED_TYPE(obj, scheme_prim_type)
+#define SCHEME_CLSD_PRIMP(obj)    HAS_BOXED_TYPE(obj, scheme_closed_prim_type)
+#define SCHEME_CONTP(obj)    HAS_BOXED_TYPE(obj, scheme_cont_type)
+#define SCHEME_ECONTP(obj)    HAS_BOXED_TYPE(obj, scheme_escaping_cont_type)
+#define SCHEME_CONT_MARK_SETP(obj)    HAS_BOXED_TYPE(obj, scheme_cont_mark_set_type)
+#define SCHEME_PROC_STRUCTP(obj) HAS_BOXED_TYPE(obj, scheme_proc_struct_type)
+#define SCHEME_CLOSUREP(obj) (HAS_BOXED_TYPE(obj, scheme_closure_type) || HAS_BOXED_TYPE(obj, scheme_case_closure_type))
 
 #define SCHEME_PRIM(obj)     (((Scheme_Primitive_Proc *)(obj))->prim_val)
 #define SCHEME_CLSD_PRIM(obj) (((Scheme_Closed_Primitive_Proc *)(obj))->prim_val)
@@ -1555,9 +1570,9 @@ typedef void (*Scheme_Invoke_Proc)(Scheme_Env *env, intptr_t phase_shift,
 
 /* Exploit the fact that these should never be dereferenced: */
 #ifndef FIRST_TWO_BYTES_ARE_LEGAL_ADDRESSES
-# define MZ_EVAL_WAITING_CONSTANT ((Scheme_Object *)0x2)
-# define MZ_APPLY_WAITING_CONSTANT ((Scheme_Object *)0x4)
-# define MZ_MULTIPLE_VALUES_CONSTANT ((Scheme_Object *)0x6)
+# define MZ_EVAL_WAITING_CONSTANT ((Scheme_Object *)0x4)
+# define MZ_APPLY_WAITING_CONSTANT ((Scheme_Object *)0x8)
+# define MZ_MULTIPLE_VALUES_CONSTANT ((Scheme_Object *)0xc)
 #endif
 
 #ifdef MZ_EVAL_WAITING_CONSTANT

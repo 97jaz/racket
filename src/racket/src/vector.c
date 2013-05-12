@@ -963,7 +963,7 @@ static Scheme_Object *unsafe_string_ref (int argc, Scheme_Object *argv[])
 {
   mzchar v;
   v = SCHEME_CHAR_STR_VAL(argv[0])[SCHEME_INT_VAL(argv[1])];
-  return scheme_make_ascii_character(v);
+  return scheme_make_character(v);
 }
 
 static Scheme_Object *unsafe_string_set (int argc, Scheme_Object *argv[])

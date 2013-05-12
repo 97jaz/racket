@@ -557,7 +557,7 @@ static int common1b(mz_jit_state *jitter, void *_data)
   mz_prolog(JIT_R1);
 
   /* Check for chaperone: */
-  ref2 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x1);
+  ref2 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x3);
   ref = mz_bnei_t(jit_forward(), JIT_R0, scheme_chaperone_type, JIT_R1);
   jit_ldxi_p(JIT_R0, JIT_R0, (intptr_t)&((Scheme_Chaperone *)0x0)->val);
   mz_epilog(JIT_R1); /* return after unwrapping */
@@ -1176,7 +1176,7 @@ static int common3(mz_jit_state *jitter, void *_data)
           }
         }
 
-	ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x1);
+	ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x3);
 	CHECK_LIMIT();
 
 	/* Slow path: */
@@ -1220,12 +1220,6 @@ static int common3(mz_jit_state *jitter, void *_data)
 	case 1:
 	  if (!iii) {
 	    (void)mz_finish_lwe(ts_scheme_checked_string_ref, refrts);
-            CHECK_LIMIT();
-	    /* might return, if char was outside Latin-1 */
-	    jit_addi_p(JIT_RUNSTACK, JIT_RUNSTACK, WORDS_TO_BYTES(2));
-	    JIT_UPDATE_THREAD_RSPTR();
-	    jit_retval(JIT_R0);
-	    mz_epilog(JIT_R2);
 	  } else {
 	    (void)mz_finish_lwe(ts_scheme_checked_string_set, refrts);
 	  }
@@ -1276,7 +1270,7 @@ static int common3(mz_jit_state *jitter, void *_data)
 	(void)mz_bnei_t(reffail, JIT_R0, ty, JIT_R2);
         if (iii) {
           jit_ldxi_s(JIT_R2, JIT_R0, &(MZ_OPT_HASH_KEY((Scheme_Inclhash_Object *)0x0)));
-          (void)jit_bmsi_ul(reffail, JIT_R2, 0x1);
+          (void)jit_bmsi_ul(reffail, JIT_R2, 0x3);
         }
 	jit_ldxi_l(JIT_R2, JIT_R0, count_offset);
         CHECK_LIMIT();
@@ -1301,15 +1295,10 @@ static int common3(mz_jit_state *jitter, void *_data)
 	    jit_ldxr_p(JIT_R0, JIT_R0, JIT_V1);
 	    break;
 	  case 1: /* string */
-	    jit_ldxi_p(JIT_R2, JIT_R0, offset);
-	    jit_ldxr_i(JIT_R2, JIT_R2, JIT_V1);
-	    /* Non-Latin-1 char: use slow path: */
-	    jit_extr_i_l(JIT_R2, JIT_R2);
-	    (void)jit_bgti_l(reffail, JIT_R2, 255);
-	    /* Latin-1: extract from scheme_char_constants: */
-	    jit_lshi_l(JIT_R2, JIT_R2, JIT_LOG_WORD_SIZE);
-	    (void)jit_movi_p(JIT_R0, scheme_char_constants);
-	    jit_ldxr_p(JIT_R0, JIT_R0, JIT_R2);
+	    jit_ldxi_p(JIT_R0, JIT_R0, offset);
+	    jit_ldxr_i(JIT_R0, JIT_R0, JIT_V1);
+            jit_lshi_l(JIT_R0, JIT_R0, 0x8);
+            jit_ori_l(JIT_R0, JIT_R0, TYPE_TO_IMMEDIATE_TAG(scheme_char_type));
 	    break;
 	  case 2: /* bytes */
 	    jit_ldxi_p(JIT_R0, JIT_R0, offset);
@@ -1350,11 +1339,9 @@ static int common3(mz_jit_state *jitter, void *_data)
 	    jit_stxr_p(JIT_V1, JIT_R0, JIT_R2);
 	    break;
 	  case 1: /* string */
-            (void)jit_bmsi_l(reffail, JIT_R2, 0x1);
-	    jit_ldxi_s(JIT_R2, JIT_R2, &((Scheme_Object *)0x0)->type);
-	    (void)jit_bnei_i(reffail, JIT_R2, scheme_char_type);
+            (void)mz_bnei_mt(reffail, JIT_R2, scheme_char_type, JIT_R1);
 	    jit_ldr_p(JIT_R2, JIT_RUNSTACK);
-	    jit_ldxi_i(JIT_R2, JIT_R2, &((Scheme_Small_Object *)0x0)->u.char_val);
+	    jit_rshi_ul(JIT_R2, JIT_R2, 0x8);
 	    jit_ldxi_p(JIT_R0, JIT_R0, offset);
 	    jit_stxr_i(JIT_V1, JIT_R0, JIT_R2);
 	    break;
@@ -1477,7 +1464,7 @@ int scheme_generate_struct_op(mz_jit_state *jitter, int kind, int for_branch,
   CHECK_LIMIT();
   /* Check argument: */
   if (kind == 1) {
-    bref1 = jit_bmsi_ul(jit_forward(), JIT_R1, 0x1);
+    bref1 = jit_bmsi_ul(jit_forward(), JIT_R1, 0x3);
     refretry = jit_get_ip();
     jit_ldxi_s(JIT_R2, JIT_R1, &((Scheme_Object *)0x0)->type);
     __START_INNER_TINY__(1);
@@ -1496,7 +1483,7 @@ int scheme_generate_struct_op(mz_jit_state *jitter, int kind, int for_branch,
     __END_INNER_TINY__(1);
   } else {
     if (check_arg_fixnum) {
-      (void)jit_bmsi_ul(refslow2, JIT_R1, 0x1);
+      (void)jit_bmsi_ul(refslow2, JIT_R1, 0x3);
     }
     jit_ldxi_s(JIT_R2, JIT_R1, &((Scheme_Object *)0x0)->type);
     __START_INNER_TINY__(1);
@@ -1780,7 +1767,7 @@ static int common4(mz_jit_state *jitter, void *_data)
     __START_TINY_JUMPS__(1);
     mz_prolog(JIT_R2);
 
-    ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x1);
+    ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x3);
 
     reffail = jit_get_ip();
     jit_subi_p(JIT_RUNSTACK, JIT_RUNSTACK, WORDS_TO_BYTES(1));
@@ -1881,7 +1868,7 @@ static int common4(mz_jit_state *jitter, void *_data)
 
       __START_SHORT_JUMPS__(1);
 
-      ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x1);
+      ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x3);
       CHECK_LIMIT();
 
       /* Slow path: non-struct proc. */
@@ -1961,7 +1948,7 @@ static int common4b(mz_jit_state *jitter, void *_data)
     
       __START_SHORT_JUMPS__(1);
 
-      ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x1);
+      ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x3);
       CHECK_LIMIT();
 
       /* Slow path: non-struct-prop proc, or argument type is
@@ -2011,7 +1998,7 @@ static int common4b(mz_jit_state *jitter, void *_data)
       CHECK_LIMIT();
 
       /* Check argument: */
-      (void)jit_bmsi_ul(refno, JIT_R1, 0x1);
+      (void)jit_bmsi_ul(refno, JIT_R1, 0x3);
       jit_ldxi_s(JIT_R2, JIT_R1, &((Scheme_Object *)0x0)->type);
       __START_INNER_TINY__(1);
       ref2 = jit_beqi_i(jit_forward(), JIT_R2, scheme_structure_type);
@@ -2577,7 +2564,7 @@ static int common7(mz_jit_state *jitter, void *_data)
     
     jit_ldxi_p(JIT_R0, JIT_R0, (intptr_t)&SCHEME_CDR(0x0));
     ref2 = jit_beqi_p(jit_forward(), JIT_R0, scheme_null);    
-    ref8 = jit_bmsi_l(jit_forward(), JIT_R0, 0x1);
+    ref8 = jit_bmsi_l(jit_forward(), JIT_R0, 0x3);
 
     ref3 = mz_bnei_t(jit_forward(), JIT_R0, scheme_pair_type, JIT_R2);
     CHECK_LIMIT();
@@ -2588,7 +2575,7 @@ static int common7(mz_jit_state *jitter, void *_data)
     jit_ldxi_p(JIT_R0, JIT_R0, (intptr_t)&SCHEME_CDR(0x0));
     jit_ldxi_p(JIT_R1, JIT_R1, (intptr_t)&SCHEME_CDR(0x0));
     ref5 = jit_beqi_p(jit_forward(), JIT_R0, scheme_null);    
-    ref7 = jit_bmsi_l(jit_forward(), JIT_R0, 0x1);
+    ref7 = jit_bmsi_l(jit_forward(), JIT_R0, 0x3);
 
     (void)mz_beqi_t(refloop, JIT_R0, scheme_pair_type, JIT_R2);
 
@@ -2701,7 +2688,7 @@ static int common8(mz_jit_state *jitter, void *_data)
     refloop = jit_get_ip();
 
     ref2 = jit_beqi_p(jit_forward(), JIT_R0, scheme_null);    
-    ref3 = jit_bmsi_l(jit_forward(), JIT_R0, 0x1);
+    ref3 = jit_bmsi_l(jit_forward(), JIT_R0, 0x3);
 
     ref4 = mz_bnei_t(jit_forward(), JIT_R0, scheme_pair_type, JIT_R2);
     CHECK_LIMIT();
@@ -2812,7 +2799,7 @@ static int common8_5(mz_jit_state *jitter, void *_data)
       refmaybedone = NULL;
       refresume = NULL;
     }
-    (void)jit_bmsi_l(refslow, JIT_R0, 0x1);
+    (void)jit_bmsi_l(refslow, JIT_R0, 0x3);
     (void)mz_bnei_t(refslow, JIT_R0, scheme_pair_type, JIT_R2);
     if (i == 1) {
       refmaybedone = jit_bmci_l(jit_forward(), JIT_R1, 0xFFF);
@@ -3115,7 +3102,7 @@ static int more_common0(mz_jit_state *jitter, void *_data)
     __START_SHORT_JUMPS__(1);
 
     mz_rs_ldr(JIT_R0);
-    ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x1);
+    ref = jit_bmci_ul(jit_forward(), JIT_R0, 0x3);
     CHECK_LIMIT();
 
     /* Slow path: call C implementation */
@@ -3138,7 +3125,7 @@ static int more_common0(mz_jit_state *jitter, void *_data)
     CHECK_LIMIT();
 
     mz_rs_ldxi(JIT_R1, 1);
-    (void)jit_bmsi_ul(refslow, JIT_R1, 0x1);
+    (void)jit_bmsi_ul(refslow, JIT_R1, 0x3);
     jit_ldxi_s(JIT_R2, JIT_R1, &((Scheme_Object *)0x0)->type);
     __START_INNER_TINY__(1);
     ref2 = jit_beqi_i(jit_forward(), JIT_R2, scheme_structure_type);
@@ -3327,7 +3314,7 @@ static int more_common1(mz_jit_state *jitter, void *_data)
     __START_INNER_TINY__(1);
     ref2 = jit_beqi_p(jit_forward(), JIT_R0, scheme_null);    
     __END_INNER_TINY__(1);
-    ref1 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x1);
+    ref1 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x3);
     ref3 = mz_bnei_t(jit_forward(), JIT_R0, scheme_pair_type, JIT_R2);
     jit_addi_l(JIT_R1, JIT_R1, 1);
     jit_ldxi_p(JIT_R0, JIT_R0, (intptr_t)&SCHEME_CDR(0x0));
@@ -3503,7 +3490,7 @@ static int more_common1(mz_jit_state *jitter, void *_data)
       __START_INNER_TINY__(1);
       ref2 = jit_beqi_p(jit_forward(), JIT_R0, scheme_null);
       __END_INNER_TINY__(1);
-      ref1 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x1);
+      ref1 = jit_bmsi_ul(jit_forward(), JIT_R0, 0x3);
       ref3 = mz_bnei_t(jit_forward(), JIT_R0, scheme_pair_type, JIT_R2);
       jit_addi_l(JIT_R1, JIT_R1, 1);
       jit_ldxi_p(JIT_R0, JIT_R0, (intptr_t)&SCHEME_CDR(0x0));

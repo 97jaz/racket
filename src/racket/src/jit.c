@@ -2274,7 +2274,7 @@ int scheme_generate(Scheme_Object *obj, mz_jit_state *jitter, int is_tail, int w
       /* If v is not known to produce a procedure, then check result: */
       if (!is_a_procedure(v, jitter)) {
         mz_rs_sync();
-        (void)jit_bmsi_l(sjc.bad_app_vals_target, JIT_R0, 0x1);
+        (void)jit_bmsi_l(sjc.bad_app_vals_target, JIT_R0, 0x3);
         jit_ldxi_s(JIT_R1, JIT_R0, &((Scheme_Object *)0x0)->type);
         (void)jit_blti_i(sjc.bad_app_vals_target, JIT_R1, scheme_prim_type);
         (void)jit_bgti_i(sjc.bad_app_vals_target, JIT_R1, scheme_proc_chaperone_type);
@@ -2975,7 +2975,7 @@ int scheme_generate(Scheme_Object *obj, mz_jit_state *jitter, int is_tail, int w
         GC_CAN_IGNORE jit_insn *ref, *ref2;
         mz_rs_ldxi(JIT_R0, 1);
         __START_TINY_JUMPS__(1);
-        ref = jit_bmsi_i(jit_forward(), JIT_R0, 0x1);
+        ref = jit_bmsi_i(jit_forward(), JIT_R0, 0x3);
         ref2 = mz_bnei_t(jit_forward(), JIT_R0, scheme_chaperone_type, JIT_R1);
         __END_TINY_JUMPS__(1);
         (void)jit_calli(sjc.wcm_chaperone); /* adjusts values on the runstack */

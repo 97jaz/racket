@@ -2053,8 +2053,8 @@ int scheme_is_exact(const Scheme_Object *n)
 {
   if (SCHEME_INTP(n)) {
     return 1;
-  } else {
-    Scheme_Type type = _SCHEME_TYPE(n);
+  } else if (BOXEDP(n)) {
+    Scheme_Type type = BOXED_TYPE(n);
     if ((type == scheme_bignum_type)
 	|| (type == scheme_rational_type))
       return 1;
@@ -2069,6 +2069,8 @@ int scheme_is_exact(const Scheme_Object *n)
     else {
       return -1;
     }
+  } else {
+    return 0;
   }
 }
 
@@ -2088,8 +2090,8 @@ int scheme_is_inexact(const Scheme_Object *n)
 {
   if (SCHEME_INTP(n)) {
     return 0;
-  } else {
-    Scheme_Type type = _SCHEME_TYPE(n);
+  } else if (BOXEDP(n)) {
+    Scheme_Type type = BOXED_TYPE(n);
     if ((type == scheme_bignum_type)
 	|| (type == scheme_rational_type))
       return 0;
@@ -2104,6 +2106,8 @@ int scheme_is_inexact(const Scheme_Object *n)
     else {
       return -1;
     }
+  } else {
+    return 0;
   }
 }
 
@@ -2333,23 +2337,25 @@ scheme_floor (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    float d = SCHEME_FLT_VAL(o);
-    return scheme_make_float(floor(d));
-  }
+    if (t == scheme_float_type) {
+      float d = SCHEME_FLT_VAL(o);
+      return scheme_make_float(floor(d));
+    }
 #endif
-  if (t == scheme_double_type) {
-    double d = SCHEME_DBL_VAL(o);
-    return scheme_make_double(floor(d));
+    if (t == scheme_double_type) {
+      double d = SCHEME_DBL_VAL(o);
+      return scheme_make_double(floor(d));
+    }
+    if (t == scheme_bignum_type)
+      return o;
+    if (t == scheme_rational_type)
+      return scheme_rational_floor(o);
   }
-  if (t == scheme_bignum_type)
-    return o;
-  if (t == scheme_rational_type)
-    return scheme_rational_floor(o);
 
   NEED_REAL(floor);
 
@@ -2362,23 +2368,25 @@ ceiling (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    float d = SCHEME_FLT_VAL(o);
-    return scheme_make_float(ceil(d));
-  }
+    if (t == scheme_float_type) {
+      float d = SCHEME_FLT_VAL(o);
+      return scheme_make_float(ceil(d));
+    }
 #endif
-  if (t == scheme_double_type) {
-    double d = SCHEME_DBL_VAL(o);
-    return scheme_make_double(ceil(d));
+    if (t == scheme_double_type) {
+      double d = SCHEME_DBL_VAL(o);
+      return scheme_make_double(ceil(d));
+    }
+    if (t == scheme_bignum_type)
+      return o;
+    if (t == scheme_rational_type)
+      return scheme_rational_ceiling(o);
   }
-  if (t == scheme_bignum_type)
-    return o;
-  if (t == scheme_rational_type)
-    return scheme_rational_ceiling(o);
 
   NEED_REAL(ceiling);
 
@@ -2400,28 +2408,30 @@ sch_truncate (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    float v = SCHEME_FLT_VAL(o);
-    if (v > 0)
-      v = floor(v);
-    else
-      v = ceil(v);
-    return scheme_make_float(v);
-  }
+    if (t == scheme_float_type) {
+      float v = SCHEME_FLT_VAL(o);
+      if (v > 0)
+        v = floor(v);
+      else
+        v = ceil(v);
+      return scheme_make_float(v);
+    }
 #endif
-  if (t == scheme_double_type) {
-    double v;
-    v = SCH_TRUNC(SCHEME_DBL_VAL(o));
-    return scheme_make_double(v);
+    if (t == scheme_double_type) {
+      double v;
+      v = SCH_TRUNC(SCHEME_DBL_VAL(o));
+      return scheme_make_double(v);
+    }
+    if (t == scheme_bignum_type)
+      return o;
+    if (t == scheme_rational_type)
+      return scheme_rational_truncate(o);
   }
-  if (t == scheme_bignum_type)
-    return o;
-  if (t == scheme_rational_type)
-    return scheme_rational_truncate(o);
 
   NEED_REAL(truncate);
 
@@ -2466,46 +2476,48 @@ sch_round (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    double d = SCHEME_FLT_VAL(o);
-    double i, frac;
-    int invert;
+    if (t == scheme_float_type) {
+      double d = SCHEME_FLT_VAL(o);
+      double i, frac;
+      int invert;
 
-    if (d < 0) {
-      d = -d;
-      invert = 1;
-    } else
-      invert = 0;
+      if (d < 0) {
+        d = -d;
+        invert = 1;
+      } else
+        invert = 0;
 
-    frac = modf(d, &i);
-    if (frac < 0.5)
-      d = i;
-    else if (frac > 0.5)
-      d = i + 1;
-    else if (fmod(i, 2.0) != 0.0)
-      d = i + 1;
-    else
-      d = i;
+      frac = modf(d, &i);
+      if (frac < 0.5)
+        d = i;
+      else if (frac > 0.5)
+        d = i + 1;
+      else if (fmod(i, 2.0) != 0.0)
+        d = i + 1;
+      else
+        d = i;
 
-    if (invert)
-      d = -d;
+      if (invert)
+        d = -d;
 
-    return scheme_make_float((float)d);
-  }
+      return scheme_make_float((float)d);
+    }
 #endif
-  if (t == scheme_double_type) {
-    double d;
-    d = SCH_ROUND(SCHEME_DBL_VAL(o));
-    return scheme_make_double(d);
+    if (t == scheme_double_type) {
+      double d;
+      d = SCH_ROUND(SCHEME_DBL_VAL(o));
+      return scheme_make_double(d);
+    }
+    if (t == scheme_bignum_type)
+      return o;
+    if (t == scheme_rational_type)
+      return scheme_rational_round(o);
   }
-  if (t == scheme_bignum_type)
-    return o;
-  if (t == scheme_rational_type)
-    return scheme_rational_round(o);
 
   NEED_REAL(round);
 
@@ -2564,17 +2576,19 @@ float TO_FLOAT_VAL(const Scheme_Object *n)
 {
   Scheme_Type t;
 
-  if (SCHEME_INTP(n))
+  if (SCHEME_INTP(n)) {
     return (float)SCHEME_INT_VAL(n);
-  t = _SCHEME_TYPE(n);
-  if (t == scheme_float_type)
-    return SCHEME_FLT_VAL(n);
-  if (t == scheme_double_type)
-    return SCHEME_DBL_VAL(n);
-  if (t == scheme_bignum_type)
-    return scheme_bignum_to_float(n);
-  if (t == scheme_rational_type)
-    return scheme_rational_to_float(n);
+  } else if (BOXEDP(n)) {
+    t = BOXED_TYPE(n);
+    if (t == scheme_float_type)
+      return SCHEME_FLT_VAL(n);
+    if (t == scheme_double_type)
+      return SCHEME_DBL_VAL(n);
+    if (t == scheme_bignum_type)
+      return scheme_bignum_to_float(n);
+    if (t == scheme_rational_type)
+      return scheme_rational_to_float(n);
+  }
   return 0.0f;
 }
 
@@ -2595,17 +2609,19 @@ double TO_DOUBLE_VAL(const Scheme_Object *n)
 {
   Scheme_Type t;
 
-  if (SCHEME_INTP(n))
+  if (SCHEME_INTP(n)) {
     return (double)SCHEME_INT_VAL(n);
-  t = _SCHEME_TYPE(n);
-  if (t == scheme_float_type)
-    return SCHEME_FLT_VAL(n);
-  if (t == scheme_double_type)
-    return SCHEME_DBL_VAL(n);
-  if (t == scheme_bignum_type)
-    return scheme_bignum_to_double(n);
-  if (t == scheme_rational_type)
-    return scheme_rational_to_double(n);
+  } else if (BOXEDP(n)) {
+    t = BOXED_TYPE(n);
+    if (t == scheme_float_type)
+      return SCHEME_FLT_VAL(n);
+    if (t == scheme_double_type)
+      return SCHEME_DBL_VAL(n);
+    if (t == scheme_bignum_type)
+      return scheme_bignum_to_double(n);
+    if (t == scheme_rational_type)
+      return scheme_rational_to_double(n);
+  }
   return 0.0;
 }
 
@@ -3880,38 +3896,39 @@ scheme_exact_to_inexact (int argc, Scheme_Object *argv[])
 #else
     return scheme_make_double(SCHEME_INT_VAL(o));
 #endif
-  }
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type)
-    return o;
+    if (t == scheme_float_type)
+      return o;
 #endif
-  if (t == scheme_double_type)
-    return o;
-  if (t == scheme_bignum_type) {
+    if (t == scheme_double_type)
+      return o;
+    if (t == scheme_bignum_type) {
 #ifdef USE_SINGLE_FLOATS_AS_DEFAULT
-    return scheme_make_float(scheme_bignum_to_float(o));
+      return scheme_make_float(scheme_bignum_to_float(o));
 #else
-    return scheme_make_double(scheme_bignum_to_double(o));
+      return scheme_make_double(scheme_bignum_to_double(o));
 #endif
-  }
-  if (t == scheme_rational_type) {
+    }
+    if (t == scheme_rational_type) {
 #ifdef USE_SINGLE_FLOATS_AS_DEFAULT
-    return scheme_make_float(scheme_rational_to_float(o));
+      return scheme_make_float(scheme_rational_to_float(o));
 #else
-    return scheme_make_double(scheme_rational_to_double(o));
+      return scheme_make_double(scheme_rational_to_double(o));
 #endif
-  }
-  if (t == scheme_complex_type) {
-    Scheme_Object *realpart, *imaginarypart;
+    }
+    if (t == scheme_complex_type) {
+      Scheme_Object *realpart, *imaginarypart;
 
-    realpart = _scheme_complex_real_part(o);
-    imaginarypart = _scheme_complex_imaginary_part(o);
+      realpart = _scheme_complex_real_part(o);
+      imaginarypart = _scheme_complex_imaginary_part(o);
 
-    realpart = scheme_exact_to_inexact(1, &realpart);
-    imaginarypart = scheme_exact_to_inexact(1, &imaginarypart);
+      realpart = scheme_exact_to_inexact(1, &realpart);
+      imaginarypart = scheme_exact_to_inexact(1, &imaginarypart);
 
-    return scheme_make_complex(realpart, imaginarypart);
+      return scheme_make_complex(realpart, imaginarypart);
+    }
   }
 
   NEED_NUMBER(exact->inexact);
@@ -3925,41 +3942,43 @@ scheme_inexact_to_exact (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o;
-  t = _SCHEME_TYPE(o);
-  if (t == scheme_double_type
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
+    if (t == scheme_double_type
 #ifdef MZ_USE_SINGLE_FLOATS
-      || t == scheme_float_type
+        || t == scheme_float_type
 #endif
-      ) {
-    double d = SCHEME_FLOAT_VAL(o);
+        ) {
+      double d = SCHEME_FLOAT_VAL(o);
 
-    /* Try simple case: */
-    Scheme_Object *i = scheme_make_integer((intptr_t)d);
-    if ((double)SCHEME_INT_VAL(i) == d) {
+      /* Try simple case: */
+      Scheme_Object *i = scheme_make_integer((intptr_t)d);
+      if ((double)SCHEME_INT_VAL(i) == d) {
 # ifdef NAN_EQUALS_ANYTHING
-      if (!MZ_IS_NAN(d))
+        if (!MZ_IS_NAN(d))
 #endif
-	return i;
+          return i;
+      }
+
+      return scheme_rational_from_double(d);
     }
+    if (t == scheme_bignum_type)
+      return o;
+    if (t == scheme_rational_type)
+      return o;
+    if (t == scheme_complex_type) {
+      Scheme_Object *realpart, *imaginarypart;
 
-    return scheme_rational_from_double(d);
-  }
-  if (t == scheme_bignum_type)
-    return o;
-  if (t == scheme_rational_type)
-    return o;
-  if (t == scheme_complex_type) {
-    Scheme_Object *realpart, *imaginarypart;
+      realpart = _scheme_complex_real_part(o);
+      imaginarypart = _scheme_complex_imaginary_part(o);
 
-    realpart = _scheme_complex_real_part(o);
-    imaginarypart = _scheme_complex_imaginary_part(o);
+      realpart = scheme_inexact_to_exact(1, &realpart);
+      imaginarypart = scheme_inexact_to_exact(1, &imaginarypart);
 
-    realpart = scheme_inexact_to_exact(1, &realpart);
-    imaginarypart = scheme_inexact_to_exact(1, &imaginarypart);
-
-    return scheme_make_complex(realpart, imaginarypart);
+      return scheme_make_complex(realpart, imaginarypart);
+    }
   }
 
   NEED_NUMBER(inexact->exact);
@@ -3973,20 +3992,21 @@ static Scheme_Object *exact_to_extfl (int argc, Scheme_Object *argv[])
   Scheme_Object *o = argv[0];
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return scheme_make_long_double(long_double_from_int(SCHEME_INT_VAL(o)));
-
-  t = _SCHEME_TYPE(o);
-  if (t == scheme_float_type)
-    return scheme_make_long_double(long_double_from_double(SCHEME_FLOAT_VAL(o)));
-  if (t == scheme_double_type)
-    return scheme_make_long_double(long_double_from_double(SCHEME_DBL_VAL(o)));
-  if (t == scheme_long_double_type)
-    return o;
-  if (t == scheme_bignum_type)
-    return scheme_make_long_double(scheme_bignum_to_long_double(o));
-  if (t == scheme_rational_type)
-    return scheme_make_long_double(scheme_rational_to_long_double(o));
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
+    if (t == scheme_float_type)
+      return scheme_make_long_double(long_double_from_double(SCHEME_FLOAT_VAL(o)));
+    if (t == scheme_double_type)
+      return scheme_make_long_double(long_double_from_double(SCHEME_DBL_VAL(o)));
+    if (t == scheme_long_double_type)
+      return o;
+    if (t == scheme_bignum_type)
+      return scheme_make_long_double(scheme_bignum_to_long_double(o));
+    if (t == scheme_rational_type)
+      return scheme_make_long_double(scheme_rational_to_long_double(o));
+  }
 
   NEED_REAL(real->extfl);
 
@@ -4074,7 +4094,7 @@ bitwise_not(int argc, Scheme_Object *argv[])
 
     a = ~a;
     return scheme_make_integer(a);
-  } else if (_SCHEME_TYPE(o) == scheme_bignum_type)
+  } else if (SCHEME_BIGNUMP(o))
     return scheme_bignum_not(o);
    
   scheme_wrong_contract("bitwise-not", "exact-integer?", 0, argc, argv);
@@ -4308,7 +4328,7 @@ integer_length(int argc, Scheme_Object *argv[])
     
     n = a;
     base = 0;
-  } else if (_SCHEME_TYPE(o) == scheme_bignum_type) {
+  } else if (SCHEME_BIGNUMP(o)) {
     bigdig d;
 
     if (!SCHEME_BIGPOS(o)) {

@@ -520,8 +520,7 @@ static MZ_INLINE Scheme_Object *force_rat(Scheme_Object *n, Small_Rational *sr);
 static MZ_INLINE Scheme_Object *force_rat(Scheme_Object *n, Small_Rational *sr)
   XFORM_SKIP_PROC
 {
-  Scheme_Type t = SCHEME_TYPE(n);
-  if (t == scheme_rational_type)
+  if (SCHEME_RATIONALP(n))
     return n;
   else
     return scheme_make_small_bn_rational(n, sr);
@@ -565,34 +564,36 @@ scheme_is_zero(const Scheme_Object *o)
 {
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return o == zeroi;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
+    if (t == scheme_float_type) {
 # ifdef NAN_EQUALS_ANYTHING
-    if (MZ_IS_NAN(SCHEME_FLT_VAL(o)))
-      return 0;
+      if (MZ_IS_NAN(SCHEME_FLT_VAL(o)))
+        return 0;
 # endif
-    return SCHEME_FLT_VAL(o) == 0.0f;
-  }
+      return SCHEME_FLT_VAL(o) == 0.0f;
+    }
 #endif
-  if (t == scheme_double_type) {
+    if (t == scheme_double_type) {
 #ifdef NAN_EQUALS_ANYTHING
-    if (MZ_IS_NAN(SCHEME_DBL_VAL(o)))
-      return 0;
+      if (MZ_IS_NAN(SCHEME_DBL_VAL(o)))
+        return 0;
 #endif
-    return SCHEME_DBL_VAL(o) == 0.0;
-  }
-  if (t == scheme_complex_type) {
-    if (scheme_is_zero(scheme_complex_imaginary_part(o)))
-      return scheme_is_zero(scheme_complex_real_part(o));
-    return 0;
-  }
+      return SCHEME_DBL_VAL(o) == 0.0;
+    }
+    if (t == scheme_complex_type) {
+      if (scheme_is_zero(scheme_complex_imaginary_part(o)))
+        return scheme_is_zero(scheme_complex_real_part(o));
+      return 0;
+    }
   
-  if ((t >= scheme_bignum_type) && (t <= scheme_complex_type))
-    return 0;
- 
+    if ((t >= scheme_bignum_type) && (t <= scheme_complex_type))
+      return 0;
+  }
+
   return -1;
 }
 
@@ -613,31 +614,33 @@ scheme_is_positive(const Scheme_Object *o)
 {
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return SCHEME_INT_VAL(o) > 0;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    float d = SCHEME_FLT_VAL(o);
+    if (t == scheme_float_type) {
+      float d = SCHEME_FLT_VAL(o);
 # ifdef NAN_EQUALS_ANYTHING
-    if (MZ_IS_NAN(d))
-      return 0;
+      if (MZ_IS_NAN(d))
+        return 0;
 # endif
-    return d > 0;
-  }
+      return d > 0;
+    }
 #endif
-  if (t == scheme_double_type) {
-    double d = SCHEME_DBL_VAL(o);
+    if (t == scheme_double_type) {
+      double d = SCHEME_DBL_VAL(o);
 #ifdef NAN_EQUALS_ANYTHING
-    if (MZ_IS_NAN(d))
-      return 0;
+      if (MZ_IS_NAN(d))
+        return 0;
 #endif
-    return d > 0;
+      return d > 0;
+    }
+    if (t == scheme_bignum_type)
+      return SCHEME_BIGPOS(o);
+    if (t == scheme_rational_type)
+      return scheme_is_rational_positive(o);
   }
-  if (t == scheme_bignum_type)
-    return SCHEME_BIGPOS(o);
-  if (t == scheme_rational_type)
-    return scheme_is_rational_positive(o);
 
   return -1;
 }
@@ -659,31 +662,33 @@ scheme_is_negative(const Scheme_Object *o)
 {
   Scheme_Type t;
 
-  if (SCHEME_INTP(o))
+  if (SCHEME_INTP(o)) {
     return SCHEME_INT_VAL(o) < 0;
-  t = _SCHEME_TYPE(o);
+  } else if (BOXEDP(o)) {
+    t = BOXED_TYPE(o);
 #ifdef MZ_USE_SINGLE_FLOATS
-  if (t == scheme_float_type) {
-    float d = SCHEME_FLT_VAL(o);
+    if (t == scheme_float_type) {
+      float d = SCHEME_FLT_VAL(o);
 # if defined(NAN_EQUALS_ANYTHING) || defined(NAN_LT_COMPARISON_WRONG)
-    if (MZ_IS_NAN(d))
-      return 0;
+      if (MZ_IS_NAN(d))
+        return 0;
 # endif
-    return d < 0;
-  }
+      return d < 0;
+    }
 #endif
-  if (t == scheme_double_type) {
-    double d = SCHEME_DBL_VAL(o);
+    if (t == scheme_double_type) {
+      double d = SCHEME_DBL_VAL(o);
 # if defined(NAN_EQUALS_ANYTHING) || defined(NAN_LT_COMPARISON_WRONG)
-    if (MZ_IS_NAN(d))
-      return 0;
+      if (MZ_IS_NAN(d))
+        return 0;
 #endif
-    return d < 0;
+      return d < 0;
+    }
+    if (t == scheme_bignum_type)
+      return !SCHEME_BIGPOS(o);
+    if (t == scheme_rational_type)
+      return !scheme_is_rational_positive(o);
   }
-  if (t == scheme_bignum_type)
-    return !SCHEME_BIGPOS(o);
-  if (t == scheme_rational_type)
-    return !scheme_is_rational_positive(o);
 
   return -1;
 }

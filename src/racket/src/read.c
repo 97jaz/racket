@@ -2940,8 +2940,8 @@ static Scheme_Object *attach_shape_property(Scheme_Object *list,
   if ((closer != ')') && stxsrc) {
     Scheme_Object *opener;
     opener = ((closer == '}') 
-	      ? scheme_make_ascii_character('{')
-	      : scheme_make_ascii_character('['));
+	      ? scheme_make_character('{')
+	      : scheme_make_character('['));
     return scheme_stx_property(list, paren_shape_symbol, opener);
   }
   return list;

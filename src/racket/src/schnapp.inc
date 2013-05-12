@@ -55,10 +55,10 @@ Scheme_Object *PRIM_APPLY_NAME(Scheme_Object *rator,
                                int argc,
                                Scheme_Object **argv)
 {
-  if (!SCHEME_INTP(rator)) {
+  if (BOXEDP(rator)) {
     Scheme_Type t;
 
-    t = _SCHEME_TYPE(rator);
+    t = BOXED_TYPE(rator);
 
     if (t == scheme_prim_type) {
       return PRIM_APPLY_NAME_FAST(rator, argc, argv);

@@ -70,6 +70,9 @@ uintptr_t PTR_TO_LONG(Scheme_Object *o)
   if (SCHEME_INTP(o))
     return (uintptr_t)o >> 1;
 
+  if (IMMEDIATEP(o))
+    return (uintptr_t)o >> 8;
+
   v = o->keyex;
 
   if (!(v & 0xFFFC)) {
@@ -1509,7 +1512,7 @@ intptr_t scheme_equal_hash_key2(Scheme_Object *o)
 
 intptr_t scheme_eqv_hash_key(Scheme_Object *o)
 {
-  if (!SCHEME_INTP(o) && (SCHEME_NUMBERP(o) || SCHEME_CHARP(o)))
+  if (!SCHEME_INTP(o) && SCHEME_NUMBERP(o))
     return to_signed_hash(scheme_equal_hash_key(o));
   else
     return to_signed_hash(PTR_TO_LONG(o));
@@ -1517,7 +1520,7 @@ intptr_t scheme_eqv_hash_key(Scheme_Object *o)
 
 intptr_t scheme_eqv_hash_key2(Scheme_Object *o)
 {
-  if (!SCHEME_INTP(o) && (SCHEME_NUMBERP(o) || SCHEME_CHARP(o)))
+  if (!SCHEME_INTP(o) && SCHEME_NUMBERP(o))
     return to_signed_hash(scheme_equal_hash_key2(o));
   else
     return to_signed_hash(PTR_TO_LONG(o) >> 1);

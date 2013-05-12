@@ -346,7 +346,7 @@ int scheme_generate_tail_call(mz_jit_state *jitter, int num_rands, int direct_na
 
   /* First, try fast direct jump to native code: */
   if (!direct_native) {
-    ref = jit_bmsi_ul(jit_forward(), JIT_V1, 0x1);
+    ref = jit_bmsi_ul(jit_forward(), JIT_V1, 0x3);
     jit_ldxi_s(JIT_R1, JIT_V1, &((Scheme_Object *)0x0)->type);
     ref2 = jit_bnei_i(jit_forward(), JIT_R1, scheme_native_closure_type);
     /* code at ref2 uses JIT_R1 */
@@ -748,7 +748,7 @@ int scheme_generate_non_tail_call(mz_jit_state *jitter, int num_rands, int direc
 
   /* Check for inlined native type */
   if (!direct_native) {
-    ref = jit_bmsi_ul(jit_forward(), JIT_V1, 0x1);
+    ref = jit_bmsi_ul(jit_forward(), JIT_V1, 0x3);
     jit_ldxi_s(JIT_R1, JIT_V1, &((Scheme_Object *)0x0)->type);
     ref2 = jit_bnei_i(jit_forward(), JIT_R1, scheme_native_closure_type);
     /* code at ref2 uses JIT_R1 */

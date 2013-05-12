@@ -375,8 +375,8 @@
     [(27) 'inline-variant-type]
     [(35) 'variable-type]
     [(36) 'module-variable-type]
-    [(114) 'resolve-prefix-type]
-    [(164) 'free-id-info-type]
+    [(113) 'resolve-prefix-type]
+    [(163) 'free-id-info-type]
     [else (error 'int->type "unknown type: ~e" i)]))
 
 (define type-readers

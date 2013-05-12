@@ -2318,7 +2318,7 @@ typedef struct Scheme_Prefix
 void scheme_clear_delayed_load_cache();
 
 #define _scheme_do_eval(obj, env, v) \
-  ((SCHEME_INTP(obj) || !SCHEME_STRTAG_VAL(_SCHEME_TYPE(obj))) \
+  ((SCHEME_INTP(obj) || IMMEDIATEP(obj) || !SCHEME_STRTAG_VAL(_SCHEME_TYPE(obj))) \
    ? obj : scheme_do_eval(obj, -1, env, v))
 #define q_scheme_eval_linked(obj) _scheme_do_eval(obj, 1)
 #define q_scheme_tail_eval(obj) scheme_tail_eval(obj)

@@ -74,6 +74,7 @@ void scheme_mz_load_retained(mz_jit_state *jitter, int rs, void *obj)
 /* obj is a pointer, but not necesarily tagged (in CGC) */
 {
   if (!SCHEME_INTP((Scheme_Object *)obj)
+      && !IMMEDIATEP((Scheme_Object *)obj)
       && !SAME_OBJ((Scheme_Object *)obj, scheme_true)
       && !SAME_OBJ((Scheme_Object *)obj, scheme_false)
       && !SAME_OBJ((Scheme_Object *)obj, scheme_void)

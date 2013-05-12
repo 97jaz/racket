@@ -1928,7 +1928,7 @@ extern int (*scheme_check_print_is_obj)(Scheme_Object *o);
 static int check_home(Scheme_Object *o)
 {
 #ifdef MZ_PRECISE_GC
-  return (SCHEME_INTP(o) || GC_is_tagged(o) 
+  return (SCHEME_INTP(o) || IMMEDIATEP(o) || GC_is_tagged(o) 
 	  || SAME_OBJ(o, scheme_true) 
 	  || SAME_OBJ(o, scheme_false)
 	  || SAME_OBJ(o, scheme_null)
@@ -2861,8 +2861,6 @@ intptr_t scheme_count_memory(Scheme_Object *root, Scheme_Hash_Table *ht)
     }
     break;
   case scheme_char_type:
-    s = sizeof(Scheme_Small_Object);
-    break;
   case scheme_integer_type:
     s = 0;
     break;
