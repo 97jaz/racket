@@ -2940,6 +2940,66 @@
                              (a k 'd) 4)
                        (a k 'd))))
 
+;; hash-assoc
+(arity-test hash-assoc 2 3)
+
+(define (hash-eql ht)
+  (cond [(hash-equal? ht) equal?]
+        [(hash-eqv? ht) eqv?]
+        [else eq?]))
+
+(define (test-hash-assoc/failure ht)
+  (define key (gensym))
+
+  (test 'nope hash-assoc ht key 'nope)
+  (test 'nope hash-assoc ht key (lambda () 'nope))
+  (err/rt-test (hash-assoc ht key) exn:fail:contract?))
+
+(define (test-hash-assoc ht0 k1 k2 retained-key)
+  (define eql? (hash-eql ht0))
+
+  (define excised-key
+    (if (eq? retained-key k1) k2 k1))
+
+  (define ht
+    (cond
+     [(immutable? ht0)
+      (let ([ht1 (hash-set ht0 k1 0)])
+        (hash-set ht1 k2 1))]
+     [else
+      (hash-set! ht0 k1 0)
+      (hash-set! ht0 k2 1)
+      ht0]))
+
+  (let* ([pair (hash-assoc ht k2)]
+         [key (car pair)]
+         [val (cdr pair)])
+    (test #t eql? k1 key)
+    (test #t eql? k2 key)
+    (test #t eq? retained-key key)
+    (test (hash-eq? ht) eq? excised-key key)
+    (test #t = 1 val))
+
+  (test-hash-assoc/failure ht))
+
+;; mutable tables: initial key is retained
+;; immutable tables: newer key is retained
+(let* ([k1 "hello"]
+       [k2 (substring k1 0)])
+  (test-hash-assoc (make-hash) k1 k2 k1)
+  (test-hash-assoc (make-weak-hash) k1 k2 k1)
+  (test-hash-assoc (hash) k1 k2 k2))
+
+(let ([k1 (integer->char #x03bb)]
+      [k2 (integer->char #x03bb)])
+  (test-hash-assoc (make-hasheqv) k1 k2 k1)
+  (test-hash-assoc (make-weak-hasheqv) k1 k2 k1)
+  (test-hash-assoc (hasheqv) k1 k2 k2))
+
+(test-hash-assoc (make-hasheq) 'foo 'foo 'foo)
+(test-hash-assoc (make-weak-hasheq) 'foo 'foo 'foo)
+(test-hash-assoc (hasheq) 'foo 'foo 'foo)
+
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Misc
 
