@@ -260,7 +260,7 @@ void scheme_clear_hash_table(Scheme_Hash_Table *ht)
 }
 
 static Scheme_Object *do_hash(Scheme_Hash_Table *table, Scheme_Object *key, int set, Scheme_Object *val,
-                              Scheme_Object *key_wraps, Scheme_Object **_interned_key)
+                              Scheme_Object *key_wraps, GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   Scheme_Object *tkey, *ekey, **keys;
   intptr_t hx, h2x;
@@ -490,7 +490,7 @@ static Scheme_Object *do_hash_set(Scheme_Hash_Table *table, Scheme_Object *key, 
 }
 
 XFORM_NONGCING static Scheme_Object *do_hash_get(Scheme_Hash_Table *table, Scheme_Object *key,
-                                                 Scheme_Object **_interned_key)
+                                                 GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   Scheme_Object *tkey, **keys;
   hash_v_t h, h2;
@@ -546,7 +546,8 @@ void scheme_hash_set(Scheme_Hash_Table *table, Scheme_Object *key, Scheme_Object
 }
 
 Scheme_Object *scheme_hash_get_w_key_wraps(Scheme_Hash_Table *table, Scheme_Object *key,
-                                           Scheme_Object *key_wraps, Scheme_Object **_interned_key)
+                                           Scheme_Object *key_wraps,
+                                           GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   if (!table->vals)
     return NULL;
@@ -1017,7 +1018,7 @@ void scheme_add_bucket_to_table(Scheme_Bucket_Table *table, Scheme_Bucket *b)
 
 void *
 scheme_lookup_in_table_w_key_wraps (Scheme_Bucket_Table *table, const char *key,
-                                    Scheme_Object *key_wraps, Scheme_Object **_interned_key)
+                                    Scheme_Object *key_wraps, GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   Scheme_Bucket *bucket;
 
@@ -3108,7 +3109,8 @@ int scheme_hash_tree_index(Scheme_Hash_Tree *ht, mzlonglong pos, Scheme_Object *
 
 static Scheme_Object *hamt_linear_search(Scheme_Hash_Tree *tree, int stype, Scheme_Object *key,
                                          GC_CAN_IGNORE int *_i, GC_CAN_IGNORE uintptr_t *_code,
-                                         Scheme_Object *key_wraps, Scheme_Object **_interned_key)
+                                         Scheme_Object *key_wraps,
+                                         GC_CAN_IGNORE Scheme_Object **_interned_key)
 /* in the case of hash collisions, we put the colliding elements in a
    tree that uses integers as keys; we have to search through the tree
    for keys, but the advatange of using a HAMT (instead of a list) is
@@ -3144,7 +3146,7 @@ static Scheme_Object *hamt_linear_search(Scheme_Hash_Tree *tree, int stype, Sche
 }
 
 XFORM_NONGCING static Scheme_Object *hamt_eq_linear_search(Scheme_Hash_Tree *tree, Scheme_Object *key,
-                                                           Scheme_Object **_interned_key)
+                                                           GC_CAN_IGNORE Scheme_Object **_interned_key)
 /* specialized for `eq?`, where we know that comparison doesn't trigger a GC */
 {
   int i;
@@ -3276,7 +3278,7 @@ Scheme_Hash_Tree *scheme_hash_tree_resolve_placeholder(Scheme_Hash_Tree *t)
 
 XFORM_NONGCING static Scheme_Object *
 scheme_eq_hash_tree_get_w_interned_key(Scheme_Hash_Tree *tree, Scheme_Object *key,
-                                       Scheme_Object **_interned_key)
+                                       GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   uintptr_t h;
   int pos;
@@ -3307,7 +3309,8 @@ Scheme_Object *scheme_eq_hash_tree_get(Scheme_Hash_Tree *tree, Scheme_Object *ke
 }
 
 Scheme_Object *scheme_hash_tree_get_w_key_wraps(Scheme_Hash_Tree *tree, Scheme_Object *key,
-                                                Scheme_Object *key_wraps, Scheme_Object **_interned_key)
+                                                Scheme_Object *key_wraps,
+                                                GC_CAN_IGNORE Scheme_Object **_interned_key)
 {
   uintptr_t h;
   int stype, pos;
