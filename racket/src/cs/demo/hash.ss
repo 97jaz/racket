@@ -79,6 +79,37 @@
                          '()
                          (cons i (loop (sub1 i)))))))
 
+(define strings
+  (let loop ([i (expt 2 12)])
+    (if (zero? i)
+        '()
+        (cons (format "hello - ~a" i) (loop (sub1 i))))))
+
+(define (build-string-hash)
+  (let loop ([ht (hash)] [xs strings])
+    (if (null? xs)
+        ht
+        (loop (hash-set ht (car xs) #t)
+              (cdr xs)))))
+
+(printf "writing\n")
+(time
+ (let loop ([i 1000])
+   (when (> i 0)
+     (build-string-hash)
+     (loop (sub1 i)))))
+
+(printf "reading\n")
+(let ([ht (build-string-hash)])
+  (time
+   (let loop ([i 1000])
+     (when (> i 0)
+       (let inner ([xs strings])
+         (when (not (null? xs))
+           (hash-ref ht (car xs))
+           (inner (cdr xs))))
+       (loop (sub1 i))))))
+
 (printf "large tables\n")
 (time
  (let loop ([j 1000])
