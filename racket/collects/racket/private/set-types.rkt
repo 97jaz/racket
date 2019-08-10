@@ -620,15 +620,13 @@
                 #'[(id)
                    (:do-in
                     ;;outer bindings
-                    ([(xs HT fn) (let ([xs set-expr])
-                                   (if (and (custom-set? xs) (-test? xs))
-                                       (values
-                                        #f
-                                        (custom-set-table xs)
-                                        (if (custom-set-spec xs)
-                                            custom-elem-contents
-                                            (lambda (x) x)))
-                                       (values xs #f #f)))])
+                    ([(xs HT wrap?) (let ([xs set-expr])
+                                      (if (and (custom-set? xs) (-test? xs))
+                                          (values
+                                           #f
+                                           (custom-set-table xs)
+                                           (custom-set-spec xs))
+                                          (values xs #f #f)))])
                     ;; outer check
                     (unless HT (raise-custom-set-exn xs 'SETTYPE))
                     ;; loop bindings
@@ -636,7 +634,10 @@
                     ;; pos check
                     i
                     ;; inner bindings
-                    ([(id) (fn (-get HT i))])
+                    ([(id) (let ([elem (-get HT i)])
+                             (if wrap?
+                                 (custom-elem-contents elem)
+                                 elem))])
                     ;; pre guard
                     #t
                     ;; post guard
@@ -648,7 +649,7 @@
 (define-in-set-sequence-syntax set-type: mutable)
 (define-in-set-sequence-syntax set-type: weak) 
 
-(struct custom-elem [contents] #:transparent)
+(struct custom-elem [contents] #:transparent #:authentic)
 
 (struct custom-spec [elem? wrap intern])
 

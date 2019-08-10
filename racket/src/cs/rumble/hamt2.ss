@@ -193,11 +193,27 @@
   (cond
    [(fx= hash (hamt-collision-node-hash node))
     (let ([idx (hamt-collision-node-index node key eqtype)])
-      (if idx
-          (make-hamt-collision-node (fx- (hamt-node-count node) 1)
-                                    (vector-remove (hamt-node-data node) idx)
-                                    hash)
-          node))]
+      (cond
+       [idx
+        (let ([data (hamt-node-data node)])
+          (cond
+           [(fx= 2 (#%vector-length data))
+            ;; return a singleton bitmap node
+            (let ([pair (if (fx= idx 0)
+                            (#%vector-ref data 1)
+                            (#%vector-ref data 0))])
+              (hamt-bitmap-node-set empty-hamt-node
+                                    hash
+                                    (car pair)
+                                    (cdr pair)
+                                    eqtype))]
+           [else
+            (make-hamt-collision-node
+             (fx- (hamt-node-count node) 1)
+             (vector-remove (hamt-node-data node) idx)
+             hash)]))]
+       [else
+        node]))]
    [else
     node]))
 
@@ -208,7 +224,7 @@
        [(fx> i 0)
         (let ([pair (#%vector-ref data (fx- i 1))])
           (if (key=? eqtype key (car pair))
-              i
+              (fx- i 1)
               (loop (fx- i 1))))]
        [else
         #f]))))
@@ -405,7 +421,7 @@
       (let loop ([pos (unsafe-hamt-node-iterate-first a)])
         (cond
          [pos
-          (let* ([key (unsafe-hamt-iterate-key pos)]
+          (let* ([key (unsafe-hamt-iterate-key #f pos)]
                  [hash (compute-hash eqtype key)])
             (and
              (hamt-node-ref b hash key (lambda (_) #t) #f eqtype shift)
@@ -505,7 +521,7 @@
     (hamt-vector-copy! new-vec (fx+ 1 idx) vec idx len)
     new-vec))
 
-(define (vector-append vec idx child)
+(define (vector-append vec child)
   (let* ([len (#%vector-length vec)]
          [new-vec (#%make-vector (fx+ 1 len))])
     (hamt-vector-copy! new-vec 0 vec 0 len)
@@ -575,19 +591,28 @@
                            eqtype))))
 
 (define (hamt-remove h key)
-  (let ([eqtype (hamt-eqtype h)])
-    (make-hamt
-     eqtype
-     (hamt-bitmap-node-remove (hamt-root h)
-                              (compute-hash eqtype key)
-                              key
-                              eqtype))))
+  (let* ([eqtype (hamt-eqtype h)]
+         [new-root
+          (hamt-bitmap-node-remove
+           (hamt-root h)
+           (compute-hash eqtype key)
+           key
+           eqtype)])
+    (if (fx= 0 (hamt-node-count new-root))
+        (case eqtype
+          [(eq) empty-hasheq]
+          [(eqv) empty-hasheqv]
+          [else empty-hash])
+        (make-hamt eqtype new-root))))
 
 (define (hamt=? a b val=?)
-  (hamt-node=? (hamt-root a)
-               (hamt-root b)
-               (hamt-eqtype a)
-               val=?))
+  (and
+   (eq? (hamt-eqtype a)
+        (hamt-eqtype b))
+   (hamt-node=? (hamt-root a)
+                (hamt-root b)
+                (hamt-eqtype a)
+                val=?)))
 
 (define (hamt-hash-code h compute-hash)
   (hamt-node-hash-code (hamt-root h) compute-hash 0))
