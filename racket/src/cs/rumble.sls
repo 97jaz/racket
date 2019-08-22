@@ -752,7 +752,7 @@
   (include "rumble/object-name.ss")
   (include "rumble/arity.ss")
 ;;  (include "rumble/intmap.ss")
-  (include "rumble/hamt2.ss")
+  (include "rumble/hamt4.ss")
   (include "rumble/hash.ss")
   (include "rumble/datum.ss")
   (include "rumble/thread-cell.ss")
